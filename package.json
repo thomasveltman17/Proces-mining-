@@ -1,0 +1,20 @@
+{
+  "name": "flowlens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Behavioral process mining prototype — mines processes from real user interactions in the browser instead of system event logs.",
+  "workspaces": [
+    "server",
+    "dashboard"
+  ],
+  "scripts": {
+    "seed": "node seed/generate.js",
+    "build": "npm run build -w dashboard",
+    "start": "node server/src/index.js",
+    "dev": "npm run build -w dashboard && node server/src/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
