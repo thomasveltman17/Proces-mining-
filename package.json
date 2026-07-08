@@ -10,6 +10,8 @@
   ],
   "scripts": {
     "seed": "node seed/generate.js",
+    "seed:desktop": "node seed/generate-desktop.js",
+    "agent:simulate": "node desktop-agent/src/index.js --simulate",
     "build:ext": "node extension/build.js",
     "build": "npm run build -w dashboard",
     "start": "node server/src/index.js",

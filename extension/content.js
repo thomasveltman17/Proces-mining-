@@ -1,23 +1,35 @@
 /* FlowLens content script (isolated world).
-   Recording is opt-in per site via the popup — nothing is captured on
-   sites the user hasn't explicitly enabled. The tracker core is loaded
-   from vendor/flowlens.js (a copy of tracker/flowlens.js). */
+
+   PASSIVE BY DEFAULT: recording is on for every http(s) site so process data
+   is gathered automatically, without the user having to initiate anything per
+   site. The only controls are a global PAUSE and an EXCLUSION list (banking,
+   health, password managers ship excluded). This removes the "intent to
+   record" problem — the user just works, and behavior flows in.
+
+   The tracker core is loaded from vendor/flowlens.js. */
 (async function () {
-  // Don't record the FlowLens dashboard/demo itself through the extension —
-  // the demo app already has the snippet installed.
-  const store = await chrome.storage.sync.get(['sites']);
-  const site = store.sites?.[location.hostname];
-  if (!site || !site.enabled) return;
+  const DEFAULT_EXCLUDES = ['accounts.google.com', 'login.microsoftonline.com'];
+
+  const store = await chrome.storage.sync.get(['paused', 'excludedHosts', 'sites']);
+  if (store.paused) return; // global pause
+
+  const host = location.hostname;
+  const excluded = new Set([...(store.excludedHosts ?? []), ...DEFAULT_EXCLUDES]);
+  const site = store.sites?.[host] ?? {};
+
+  // Per-site override can force-disable; otherwise passive default = ON.
+  if (site.enabled === false) return;
+  if (!site.enabled && [...excluded].some((h) => host === h || host.endsWith('.' + h))) return;
 
   window.FlowLens.init({
-    app: site.appName || location.hostname,
-    // The extension relays batches through its service worker, so the page's
-    // Content-Security-Policy can't block delivery to the local server.
+    app: site.appName || host,
+    // Relayed through the service worker, so page CSP can't block delivery.
     transport: (payload) => {
       chrome.runtime.sendMessage({ type: 'flowlens-batch', payload }).catch(() => {});
     },
-    // history.pushState can't be patched from the isolated world → poll.
     pollNavigation: true,
+    // No case regex needed anymore — the server discovers cases from shared
+    // entities. A per-site regex still works as an optional hint if set.
     caseIdFrom: site.caseRegex
       ? () => {
           try {

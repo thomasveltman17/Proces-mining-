@@ -11,31 +11,43 @@ async function currentHost() {
   const host = await currentHost();
   document.getElementById('host').textContent = host ?? 'no recordable page';
 
-  const { sites = {}, server = '' } = await chrome.storage.sync.get(['sites', 'server']);
-  const site = (host && sites[host]) || {};
+  const { paused = false, excludedHosts = [], server = '' } = await chrome.storage.sync.get([
+    'paused',
+    'excludedHosts',
+    'server',
+  ]);
 
-  const $enabled = document.getElementById('enabled');
-  const $appName = document.getElementById('appName');
-  const $caseRegex = document.getElementById('caseRegex');
+  const $paused = document.getElementById('paused');
+  const $exclude = document.getElementById('excludeSite');
   const $server = document.getElementById('server');
+  const $state = document.getElementById('siteState');
 
-  $enabled.checked = !!site.enabled;
-  $appName.value = site.appName ?? '';
-  $caseRegex.value = site.caseRegex ?? '';
+  $paused.checked = !!paused;
+  $exclude.checked = host ? excludedHosts.includes(host) : false;
   $server.value = server;
 
-  const dashBase = (server || 'http://localhost:4000').replace(/\/$/, '');
-  document.getElementById('dash').href = dashBase;
+  function refreshState() {
+    const recording = !$paused.checked && !$exclude.checked;
+    $state.textContent = recording ? 'recording' : 'excluded';
+    $state.className = 'state ' + (recording ? 'on' : 'off');
+  }
+  refreshState();
+  $paused.addEventListener('change', refreshState);
+  $exclude.addEventListener('change', refreshState);
+
+  document.getElementById('dash').href = (server || 'http://localhost:4000').replace(/\/$/, '');
 
   document.getElementById('save').addEventListener('click', async () => {
+    const set = new Set(excludedHosts);
     if (host) {
-      sites[host] = {
-        enabled: $enabled.checked,
-        appName: $appName.value.trim(),
-        caseRegex: $caseRegex.value.trim(),
-      };
+      if ($exclude.checked) set.add(host);
+      else set.delete(host);
     }
-    await chrome.storage.sync.set({ sites, server: $server.value.trim() });
+    await chrome.storage.sync.set({
+      paused: $paused.checked,
+      excludedHosts: [...set],
+      server: $server.value.trim(),
+    });
     document.getElementById('saved').textContent = 'Saved — reload the page to apply.';
   });
 })();

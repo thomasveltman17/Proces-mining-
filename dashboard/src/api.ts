@@ -76,12 +76,58 @@ const appQ = (app: string, sep = '?') => (app ? `${sep}app=${encodeURIComponent(
 
 export const fetchApps = () => get<AppInfo[]>('/api/apps');
 export const fetchStats = (app = '') => get<Stats>(`/api/stats${appQ(app)}`);
-export const fetchProcessMap = (minFreq: number, app = '') =>
-  get<ProcessMapData>(`/api/process-map?minFreq=${minFreq}${appQ(app, '&')}`);
+export const fetchProcessMap = (minFreq: number, app = '', processId = '') =>
+  get<ProcessMapData>(
+    `/api/process-map?minFreq=${minFreq}${appQ(app, '&')}${processId ? `&process=${encodeURIComponent(processId)}` : ''}`
+  );
 export const fetchVariants = (app = '') => get<Variant[]>(`/api/variants${appQ(app)}`);
 export const fetchFriction = (app = '') => get<FrictionIssue[]>(`/api/friction${appQ(app)}`);
 export const fetchSessions = (app = '') => get<SessionSummary[]>(`/api/sessions${appQ(app)}`);
 export const fetchSession = (id: string) => get<SessionDetail>(`/api/sessions/${id}`);
+
+// ---- Cross-app process discovery ----
+
+export interface DiscoveredProcess {
+  id: string;
+  name: string;
+  description: string;
+  apps: string[];
+  caseCount: number;
+  sampleSequence: { name: string; app: string | null }[];
+}
+
+export interface SourceInfo {
+  source: string;
+  events: number;
+}
+
+export interface ProcessesResponse {
+  processes: DiscoveredProcess[];
+  sources: SourceInfo[];
+  totals: { cases: number; episodes: number; sessions: number };
+}
+
+export interface CaseSummary {
+  id: string;
+  entity: string;
+  apps: string[];
+  processId: string | null;
+  activityCount: number;
+  startTs: number;
+}
+
+export interface CaseDetail {
+  id: string;
+  entity: string;
+  apps: string[];
+  processId: string | null;
+  timeline: { activity: string; app: string | null; ts: number; endTs: number; repeat: number }[];
+}
+
+export const fetchProcesses = () => get<ProcessesResponse>('/api/processes');
+export const fetchProcessCases = (processId: string) =>
+  get<CaseSummary[]>(`/api/cases?process=${encodeURIComponent(processId)}`);
+export const fetchCase = (id: string) => get<CaseDetail>(`/api/cases/${encodeURIComponent(id)}`);
 
 export const START = '__start__';
 export const END = '__end__';

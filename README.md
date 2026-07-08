@@ -64,16 +64,67 @@ Caveats: DOM-based apps work well; canvas-rendered UIs (Google-Sheets-style
 editors) expose no semantics to read. Desktop (non-browser) apps are out of
 scope.
 
+## Passive, cross-app process discovery (no intent, no per-app work)
+
+The extension and snippet still need *someone to turn recording on* and only
+see the browser. The bigger goal is to capture **all** desktop behavior —
+Outlook, Excel, a calendar, a browser — **passively**, and let the system
+**discover the processes by itself**, with no one defining where a case starts
+or what an activity is.
+
+**How the capture generalizes without a connector per app:** every desktop OS
+already exposes a *semantic* description of every application to assistive tech
+— **Windows UI Automation**, **macOS Accessibility**, **Linux AT-SPI**. One
+background agent reading that tree sees Outlook's "Send" button and Excel's
+active cell the same way the browser tracker sees a web button — the same
+"capture meaning, not pixels" idea, one layer lower, with zero integration per
+app. Where accessibility is thin (canvas apps, remote desktop), a **vision-LLM
+fallback** screenshots the focused window and asks Claude what's happening. See
+`desktop-agent/ARCHITECTURE.md`.
+
+**How processes are discovered with no case definition:** the server mines the
+firehose. `server/src/discovery/` segments the stream into task **episodes**,
+extracts **entities** (invoice/PO/order IDs, and fuzzy names via Claude),
+**stitches** episodes that share an entity into one cross-app case (an Outlook
+email + an Excel entry + a browser ERP step, all about invoice 1002),
+**normalizes** activities into canonical names, and **clusters** cases into
+auto-named processes — then runs the existing miner. The **Discovered
+processes** dashboard tab shows the result: named processes, the apps each
+spans, and per-case timelines that hop between apps with "app switch" tags.
+
+```bash
+npm run seed           # browser demo sessions
+npm run seed:desktop   # simulated cross-app desktop feed (Outlook/Excel/ERP/calendar)
+npm run dev            # → http://localhost:4000  (opens on Discovered processes)
+```
+
+The AI layer (`server/src/ai.js`, model `claude-opus-4-8`) drives activity
+labeling, entity extraction, and process naming. **Every AI call has a
+deterministic offline fallback**, so the whole pipeline runs and is verifiable
+with no API key; set `ANTHROPIC_API_KEY` to use real Claude (and the vision
+path). Recording is **passive by default** in the extension now — on for every
+site except a configurable exclusion list, with a global pause; field values
+are still never captured.
+
+> Sandbox note: the native accessibility agent is shipped as a spec + skeleton
+> (`desktop-agent/`) because it can't run in a headless Linux container.
+> `npm run agent:simulate` replays the simulated feed through the real emit
+> path; because every source emits the identical event schema, swapping in a
+> real OS agent changes nothing downstream.
+
 ## What's in the box
 
 ```
 tracker/flowlens.js    Drop-in capture SDK (no build step, ~300 lines)
-extension/             Chrome extension (MV3): records any site you enable, no install on the target app
+extension/             Chrome extension (MV3): passive-by-default browser capture
+desktop-agent/         OS-accessibility + vision-LLM capture — spec + runnable skeleton
 demo-app/              Mock invoice-approval app with the tracker installed
-demo-app/books/        Mock "third-party" bookkeeping app WITHOUT tracker — extension demo target
-server/                Express + SQLite: ingest, abstraction, mining, friction, API
-dashboard/             React + React Flow: process map, variants, friction, sessions
-seed/                  Deterministic generator for 62 realistic sessions
+demo-app/books/        Mock "third-party" bookkeeping app WITHOUT tracker
+server/                Express + SQLite: ingest, discovery engine, mining, friction, API
+server/src/discovery/  segment → stitch entities → normalize → cluster → name
+server/src/ai.js       Claude labeling/extraction/naming with offline fallbacks
+dashboard/             React + React Flow: discovered processes, cross-app cases, map, friction
+seed/                  Browser sessions + simulated cross-app desktop feed
 ```
 
 ### 1. Capture — `tracker/flowlens.js`
@@ -140,7 +191,10 @@ turns them into meaningful activities:
 |---|---|
 | `POST /api/events` | Ingest a batch: `{ session, events }` |
 | `GET /api/apps` | Captured apps with session counts |
-| `GET /api/stats` | Headline counts (all GET endpoints accept `?app=` to scope to one app) |
+| `GET /api/processes` | Auto-discovered cross-app processes (name, apps, case count) |
+| `GET /api/cases` / `GET /api/cases/:id` | Stitched cross-app cases / one case's cross-app timeline |
+| `GET /api/process-map?process=P2` | DFG for one discovered process |
+| `GET /api/stats` | Headline counts (map/variants/friction accept `?app=` to scope) |
 | `GET /api/process-map?minFreq=n` | DFG nodes + edges |
 | `GET /api/variants` | Ranked variants |
 | `GET /api/friction` | Detected friction issues |

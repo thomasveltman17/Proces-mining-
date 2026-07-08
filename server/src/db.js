@@ -19,21 +19,34 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS raw_events (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id  TEXT NOT NULL,
-    case_id     TEXT,
-    type        TEXT NOT NULL,
-    label       TEXT,
-    selector    TEXT,
-    page        TEXT,
-    value_len   INTEGER,
-    duration_ms INTEGER,
-    ts          INTEGER NOT NULL
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id   TEXT NOT NULL,
+    case_id      TEXT,
+    type         TEXT NOT NULL,
+    label        TEXT,
+    selector     TEXT,
+    page         TEXT,
+    value_len    INTEGER,
+    duration_ms  INTEGER,
+    ts           INTEGER NOT NULL,
+    source       TEXT NOT NULL DEFAULT 'browser',
+    app          TEXT,
+    window_title TEXT
   );
 
   CREATE INDEX IF NOT EXISTS idx_raw_events_session ON raw_events(session_id, ts);
   CREATE INDEX IF NOT EXISTS idx_raw_events_case ON raw_events(case_id, ts);
 `);
+
+// Migrate older databases that predate the cross-app columns.
+for (const col of [
+  ["source", "TEXT NOT NULL DEFAULT 'browser'"],
+  ['app', 'TEXT'],
+  ['window_title', 'TEXT'],
+]) {
+  const exists = db.prepare(`SELECT 1 FROM pragma_table_info('raw_events') WHERE name = ?`).get(col[0]);
+  if (!exists) db.exec(`ALTER TABLE raw_events ADD COLUMN ${col[0]} ${col[1]}`);
+}
 
 const upsertSession = db.prepare(`
   INSERT INTO sessions (id, app, started_at, last_seen_at, user_agent)
@@ -42,8 +55,10 @@ const upsertSession = db.prepare(`
 `);
 
 const insertEvent = db.prepare(`
-  INSERT INTO raw_events (session_id, case_id, type, label, selector, page, value_len, duration_ms, ts)
-  VALUES (@sessionId, @caseId, @type, @label, @selector, @page, @valueLen, @durationMs, @ts)
+  INSERT INTO raw_events
+    (session_id, case_id, type, label, selector, page, value_len, duration_ms, ts, source, app, window_title)
+  VALUES
+    (@sessionId, @caseId, @type, @label, @selector, @page, @valueLen, @durationMs, @ts, @source, @app, @windowTitle)
 `);
 
 export const ingestBatch = db.transaction((session, events) => {
@@ -65,6 +80,11 @@ export const ingestBatch = db.transaction((session, events) => {
       valueLen: e.valueLen ?? null,
       durationMs: e.durationMs ?? null,
       ts: e.ts,
+      // Cross-app provenance: which capture layer and which application this
+      // event came from. Defaults keep browser-only ingestion working.
+      source: e.source ?? session.source ?? 'browser',
+      app: e.app ?? session.app ?? null,
+      windowTitle: e.windowTitle ?? e.window_title ?? null,
     });
   }
 });

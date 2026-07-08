@@ -9,13 +9,16 @@
     .host { color: #6b7a8c; font-size: 12px; margin-bottom: 12px; word-break: break-all; }
     label { display: block; font-size: 12px; color: #4a5a6b; margin: 10px 0 3px; }
     input[type='text'] { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #c9d2dd; border-radius: 6px; font: inherit; }
-    .toggle-row { display: flex; align-items: center; gap: 8px; padding: 10px; background: #f3f5f8; border-radius: 8px; margin-bottom: 4px; }
+    .toggle-row { display: flex; align-items: center; gap: 8px; padding: 10px; background: #f3f5f8; border-radius: 8px; margin-bottom: 8px; }
     .toggle-row strong { font-size: 13px; }
     .hint { color: #97a4b3; font-size: 11px; margin-top: 2px; }
     button { margin-top: 14px; width: 100%; padding: 8px; border-radius: 8px; border: none; background: #2f80ed; color: #fff; font: inherit; cursor: pointer; }
     .links { margin-top: 10px; text-align: center; }
     .links a { color: #2f80ed; font-size: 12px; }
     .saved { color: #12703a; font-size: 12px; text-align: center; margin-top: 8px; min-height: 14px; }
+    .state { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+    .state.on { background: #dcf5e4; color: #12703a; }
+    .state.off { background: #fbeaea; color: #c53030; }
   </style>
 </head>
 <body>
@@ -23,19 +26,20 @@
   <div class="host" id="host">…</div>
 
   <div class="toggle-row">
-    <input type="checkbox" id="enabled" />
+    <input type="checkbox" id="paused" />
     <div>
-      <strong>Record this site</strong>
-      <div class="hint">semantic interactions only — never field values</div>
+      <strong>Pause all recording</strong>
+      <div class="hint">passive by default — recording is on everywhere unless paused</div>
     </div>
   </div>
 
-  <label for="appName">App name (shown in the dashboard)</label>
-  <input type="text" id="appName" placeholder="defaults to hostname" />
-
-  <label for="caseRegex">Case-ID regex on the URL (optional)</label>
-  <input type="text" id="caseRegex" placeholder="e.g. invoices/(\d+)" />
-  <div class="hint">first capture group becomes the case id; leave empty for per-session cases</div>
+  <div class="toggle-row">
+    <input type="checkbox" id="excludeSite" />
+    <div>
+      <strong>Never record this site</strong>
+      <div class="hint">this site: <span id="siteState" class="state on">recording</span></div>
+    </div>
+  </div>
 
   <label for="server">FlowLens server</label>
   <input type="text" id="server" placeholder="http://localhost:4000" />

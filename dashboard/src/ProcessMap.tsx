@@ -105,25 +105,27 @@ function isNodeInHighlight(id: string, pairs: Set<string>): boolean {
 
 export default function ProcessMap({
   app,
+  processId = '',
   highlight,
   onClearHighlight,
 }: {
   app: string;
+  processId?: string;
   highlight: Variant | null;
   onClearHighlight: () => void;
 }) {
-  const [minFreq, setMinFreq] = useState(2);
+  const [minFreq, setMinFreq] = useState(processId ? 1 : 2);
   const [data, setData] = useState<ProcessMapData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchProcessMap(minFreq, app)
+    fetchProcessMap(minFreq, app, processId)
       .then((d) => {
         setData(d);
         setError(null);
       })
       .catch((e) => setError(String(e)));
-  }, [minFreq, app]);
+  }, [minFreq, app, processId]);
 
   const highlightPairs = useMemo(() => {
     if (!highlight) return null;

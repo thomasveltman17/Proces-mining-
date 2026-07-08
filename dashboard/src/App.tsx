@@ -4,10 +4,12 @@ import ProcessMap from './ProcessMap';
 import Variants from './Variants';
 import Friction from './Friction';
 import Sessions from './Sessions';
+import Processes from './Processes';
 
-type Tab = 'map' | 'variants' | 'friction' | 'sessions';
+type Tab = 'processes' | 'map' | 'variants' | 'friction' | 'sessions';
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'processes', label: 'Discovered processes' },
   { id: 'map', label: 'Process map' },
   { id: 'variants', label: 'Variants' },
   { id: 'friction', label: 'Friction' },
@@ -15,7 +17,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('map');
+  const [tab, setTab] = useState<Tab>('processes');
   const [apps, setApps] = useState<AppInfo[]>([]);
   const [app, setApp] = useState(''); // '' = all apps
   const [stats, setStats] = useState<Stats | null>(null);
@@ -78,6 +80,7 @@ export default function App() {
         </div>
       )}
       <div className="content">
+        {tab === 'processes' && <Processes />}
         {tab === 'map' && <ProcessMap app={app} highlight={highlight} onClearHighlight={() => setHighlight(null)} />}
         {tab === 'variants' && <Variants app={app} onShowOnMap={showOnMap} />}
         {tab === 'friction' && <Friction app={app} />}

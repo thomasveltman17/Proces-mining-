@@ -112,6 +112,9 @@
     event.ts = event.ts || Date.now();
     event.page = event.page || state.currentPage;
     event.caseId = event.caseId || currentCaseId();
+    // Cross-app provenance: this stream is one browser app.
+    event.source = 'browser';
+    event.app = event.app || state.config.app || location.hostname;
     state.buffer.push(event);
     if (state.buffer.length >= FLUSH_BATCH_SIZE) flush();
   }
@@ -121,6 +124,7 @@
       session: {
         id: state.sessionId,
         app: state.config.app || 'unknown',
+        source: 'browser',
         startedAt: state.startedAt,
         lastSeenAt: Date.now(),
         userAgent: navigator.userAgent,

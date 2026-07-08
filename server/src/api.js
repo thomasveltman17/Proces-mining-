@@ -3,6 +3,7 @@ import { allEvents, allSessions, eventsForSession, ingestBatch, listApps } from 
 import { activityName, buildCases } from './abstraction.js';
 import { discoverProcessMap, discoverVariants } from './mining.js';
 import { analyzeFriction } from './friction.js';
+import { discover, caseTimeline, activeSources, sessionCount } from './discovery/pipeline.js';
 
 export const api = Router();
 
@@ -34,9 +35,18 @@ api.get('/stats', (req, res) => {
   });
 });
 
-api.get('/process-map', (req, res) => {
+api.get('/process-map', async (req, res) => {
   const minFreq = Number(req.query.minFreq ?? 0);
-  const cases = buildCases(allEvents(req.query.app || undefined));
+  let cases;
+  if (req.query.process) {
+    // Scope to a discovered cross-app process (from the discovery pipeline).
+    const { cases: allCases, processes } = await discover();
+    const proc = processes.find((p) => p.id === req.query.process);
+    const ids = new Set(proc?.caseIds ?? []);
+    cases = new Map([...allCases].filter(([id]) => ids.has(id)));
+  } else {
+    cases = buildCases(allEvents(req.query.app || undefined));
+  }
   const { nodes, edges } = discoverProcessMap(cases);
   const keptEdges = edges.filter((e) => e.count >= minFreq);
   const connected = new Set(keptEdges.flatMap((e) => [e.from, e.to]));
@@ -77,6 +87,54 @@ api.get('/sessions', (req, res) => {
     cases: byCaseOfSession.get(s.id) ?? [],
   }));
   res.json(list.sort((a, b) => b.startedAt - a.startedAt));
+});
+
+// ---- Cross-app process discovery -------------------------------------------
+
+api.get('/processes', async (_req, res) => {
+  const { processes, cases, meta } = await discover();
+  res.json({
+    processes: processes.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      apps: p.apps,
+      caseCount: p.caseCount,
+      sampleSequence: (p.sequences[0] ?? []).map((a) => ({ name: a.name, app: a.app })),
+    })),
+    sources: activeSources(),
+    totals: { cases: cases.size, episodes: meta.episodes, sessions: sessionCount() },
+  });
+});
+
+api.get('/cases/:id', async (req, res) => {
+  const { cases, caseToProcess } = await discover();
+  const c = cases.get(req.params.id);
+  if (!c) return res.status(404).json({ error: 'case not found' });
+  res.json({
+    id: c.caseId,
+    entity: c.entity,
+    apps: [...c.apps],
+    processId: caseToProcess.get(c.caseId) ?? null,
+    timeline: caseTimeline(c),
+  });
+});
+
+api.get('/cases', async (req, res) => {
+  const { cases, caseToProcess } = await discover();
+  const wantProcess = req.query.process || undefined;
+  const list = [...cases.values()]
+    .filter((c) => !wantProcess || caseToProcess.get(c.caseId) === wantProcess)
+    .map((c) => ({
+      id: c.caseId,
+      entity: c.entity,
+      apps: [...c.apps],
+      processId: caseToProcess.get(c.caseId) ?? null,
+      activityCount: c.activities.length,
+      startTs: c.activities[0].ts,
+    }))
+    .sort((a, b) => b.startTs - a.startTs);
+  res.json(list);
 });
 
 api.get('/sessions/:id', (req, res) => {
