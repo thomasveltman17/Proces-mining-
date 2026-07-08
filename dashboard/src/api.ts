@@ -60,17 +60,27 @@ export interface SessionDetail {
   rawEvents: { type: string; label: string | null; activity: string | null; page: string | null; ts: number }[];
 }
 
+export interface AppInfo {
+  app: string;
+  sessions: number;
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`${path} → ${res.status}`);
   return res.json();
 }
 
-export const fetchStats = () => get<Stats>('/api/stats');
-export const fetchProcessMap = (minFreq: number) => get<ProcessMapData>(`/api/process-map?minFreq=${minFreq}`);
-export const fetchVariants = () => get<Variant[]>('/api/variants');
-export const fetchFriction = () => get<FrictionIssue[]>('/api/friction');
-export const fetchSessions = () => get<SessionSummary[]>('/api/sessions');
+/** app === '' means "all apps". */
+const appQ = (app: string, sep = '?') => (app ? `${sep}app=${encodeURIComponent(app)}` : '');
+
+export const fetchApps = () => get<AppInfo[]>('/api/apps');
+export const fetchStats = (app = '') => get<Stats>(`/api/stats${appQ(app)}`);
+export const fetchProcessMap = (minFreq: number, app = '') =>
+  get<ProcessMapData>(`/api/process-map?minFreq=${minFreq}${appQ(app, '&')}`);
+export const fetchVariants = (app = '') => get<Variant[]>(`/api/variants${appQ(app)}`);
+export const fetchFriction = (app = '') => get<FrictionIssue[]>(`/api/friction${appQ(app)}`);
+export const fetchSessions = (app = '') => get<SessionSummary[]>(`/api/sessions${appQ(app)}`);
 export const fetchSession = (id: string) => get<SessionDetail>(`/api/sessions/${id}`);
 
 export const START = '__start__';

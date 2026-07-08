@@ -20,6 +20,15 @@ app.use(express.text({ type: 'text/plain', limit: '2mb' }), (req, _res, next) =>
   next();
 });
 
+// The browser extension's service worker posts from a chrome-extension://
+// origin; the ingest API is open by design for this prototype.
+app.use('/api', (req, res, next) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 app.use('/api', api);
 app.use('/tracker', express.static(path.join(root, 'tracker')));
 app.use('/demo', express.static(path.join(root, 'demo-app')));

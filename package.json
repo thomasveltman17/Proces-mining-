@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "seed": "node seed/generate.js",
+    "build:ext": "node extension/build.js",
     "build": "npm run build -w dashboard",
     "start": "node server/src/index.js",
     "dev": "npm run build -w dashboard && node server/src/index.js"

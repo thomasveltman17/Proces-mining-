@@ -1,13 +1,14 @@
 import { Fragment, useEffect, useState } from 'react';
 import { fetchSession, fetchSessions, fmtDuration, SessionDetail, SessionSummary } from './api';
 
-export default function Sessions() {
+export default function Sessions({ app }: { app: string }) {
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
   const [selected, setSelected] = useState<SessionDetail | null>(null);
 
   useEffect(() => {
-    fetchSessions().then(setSessions).catch(console.error);
-  }, []);
+    fetchSessions(app).then(setSessions).catch(console.error);
+    setSelected(null);
+  }, [app]);
 
   const open = (id: string) => fetchSession(id).then(setSelected).catch(console.error);
 

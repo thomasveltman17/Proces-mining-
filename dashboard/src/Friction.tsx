@@ -10,12 +10,12 @@ const KIND_LABEL: Record<string, string> = {
   abandonment: 'abandonment',
 };
 
-export default function Friction() {
+export default function Friction({ app }: { app: string }) {
   const [issues, setIssues] = useState<FrictionIssue[] | null>(null);
 
   useEffect(() => {
-    fetchFriction().then(setIssues).catch(console.error);
-  }, []);
+    fetchFriction(app).then(setIssues).catch(console.error);
+  }, [app]);
 
   return (
     <div className="panel">

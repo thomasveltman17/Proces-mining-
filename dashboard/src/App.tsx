@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchStats, Stats, Variant } from './api';
+import { AppInfo, fetchApps, fetchStats, Stats, Variant } from './api';
 import ProcessMap from './ProcessMap';
 import Variants from './Variants';
 import Friction from './Friction';
@@ -16,16 +16,27 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('map');
+  const [apps, setApps] = useState<AppInfo[]>([]);
+  const [app, setApp] = useState(''); // '' = all apps
   const [stats, setStats] = useState<Stats | null>(null);
   const [highlight, setHighlight] = useState<Variant | null>(null);
 
   useEffect(() => {
-    fetchStats().then(setStats).catch(console.error);
+    fetchApps().then(setApps).catch(console.error);
   }, [tab]);
+
+  useEffect(() => {
+    fetchStats(app).then(setStats).catch(console.error);
+  }, [tab, app]);
 
   const showOnMap = (v: Variant) => {
     setHighlight(v);
     setTab('map');
+  };
+
+  const selectApp = (next: string) => {
+    setApp(next);
+    setHighlight(null); // a variant belongs to one app's process
   };
 
   return (
@@ -35,6 +46,16 @@ export default function App() {
           Flow<span>Lens</span>
         </div>
         <div className="subtitle">behavioral process mining — mined from real user interactions, not system logs</div>
+        {apps.length > 1 && (
+          <select className="app-select" value={app} onChange={(e) => selectApp(e.target.value)}>
+            <option value="">all apps</option>
+            {apps.map((a) => (
+              <option key={a.app} value={a.app}>
+                {a.app} ({a.sessions})
+              </option>
+            ))}
+          </select>
+        )}
         <div className="spacer" />
         <a href="/demo/" target="_blank" rel="noreferrer">
           Open demo app ↗
@@ -57,10 +78,10 @@ export default function App() {
         </div>
       )}
       <div className="content">
-        {tab === 'map' && <ProcessMap highlight={highlight} onClearHighlight={() => setHighlight(null)} />}
-        {tab === 'variants' && <Variants onShowOnMap={showOnMap} />}
-        {tab === 'friction' && <Friction />}
-        {tab === 'sessions' && <Sessions />}
+        {tab === 'map' && <ProcessMap app={app} highlight={highlight} onClearHighlight={() => setHighlight(null)} />}
+        {tab === 'variants' && <Variants app={app} onShowOnMap={showOnMap} />}
+        {tab === 'friction' && <Friction app={app} />}
+        {tab === 'sessions' && <Sessions app={app} />}
       </div>
     </>
   );

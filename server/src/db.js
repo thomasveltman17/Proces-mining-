@@ -69,14 +69,32 @@ export const ingestBatch = db.transaction((session, events) => {
   }
 });
 
-export function allEvents() {
+export function allEvents(app) {
+  if (app) {
+    return db
+      .prepare(
+        `SELECT e.* FROM raw_events e
+         JOIN sessions s ON s.id = e.session_id
+         WHERE s.app = ? ORDER BY e.ts, e.id`
+      )
+      .all(app);
+  }
   return db
     .prepare('SELECT * FROM raw_events ORDER BY ts, id')
     .all();
 }
 
-export function allSessions() {
+export function allSessions(app) {
+  if (app) {
+    return db.prepare('SELECT * FROM sessions WHERE app = ? ORDER BY started_at').all(app);
+  }
   return db.prepare('SELECT * FROM sessions ORDER BY started_at').all();
+}
+
+export function listApps() {
+  return db
+    .prepare('SELECT app, COUNT(*) AS sessions FROM sessions GROUP BY app ORDER BY sessions DESC')
+    .all();
 }
 
 export function eventsForSession(sessionId) {

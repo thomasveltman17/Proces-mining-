@@ -38,6 +38,14 @@ body {
 .topbar .logo span { color: var(--accent); }
 .topbar .subtitle { color: var(--muted); font-size: 12px; }
 .topbar .spacer { flex: 1; }
+.topbar .app-select {
+  font: inherit; font-size: 13px;
+  padding: 5px 8px;
+  border: 1px solid var(--baseline);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
 .topbar a { color: var(--accent); font-size: 13px; text-decoration: none; }
 
 .tabs { display: flex; gap: 4px; padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--grid); }

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; width: 300px; margin: 0; padding: 14px; color: #1c2733; font-size: 13px; }
+    h1 { font-size: 14px; margin: 0 0 2px; }
+    h1 span { color: #2f80ed; }
+    .host { color: #6b7a8c; font-size: 12px; margin-bottom: 12px; word-break: break-all; }
+    label { display: block; font-size: 12px; color: #4a5a6b; margin: 10px 0 3px; }
+    input[type='text'] { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #c9d2dd; border-radius: 6px; font: inherit; }
+    .toggle-row { display: flex; align-items: center; gap: 8px; padding: 10px; background: #f3f5f8; border-radius: 8px; margin-bottom: 4px; }
+    .toggle-row strong { font-size: 13px; }
+    .hint { color: #97a4b3; font-size: 11px; margin-top: 2px; }
+    button { margin-top: 14px; width: 100%; padding: 8px; border-radius: 8px; border: none; background: #2f80ed; color: #fff; font: inherit; cursor: pointer; }
+    .links { margin-top: 10px; text-align: center; }
+    .links a { color: #2f80ed; font-size: 12px; }
+    .saved { color: #12703a; font-size: 12px; text-align: center; margin-top: 8px; min-height: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Flow<span>Lens</span> Recorder</h1>
+  <div class="host" id="host">…</div>
+
+  <div class="toggle-row">
+    <input type="checkbox" id="enabled" />
+    <div>
+      <strong>Record this site</strong>
+      <div class="hint">semantic interactions only — never field values</div>
+    </div>
+  </div>
+
+  <label for="appName">App name (shown in the dashboard)</label>
+  <input type="text" id="appName" placeholder="defaults to hostname" />
+
+  <label for="caseRegex">Case-ID regex on the URL (optional)</label>
+  <input type="text" id="caseRegex" placeholder="e.g. invoices/(\d+)" />
+  <div class="hint">first capture group becomes the case id; leave empty for per-session cases</div>
+
+  <label for="server">FlowLens server</label>
+  <input type="text" id="server" placeholder="http://localhost:4000" />
+
+  <button id="save">Save</button>
+  <div class="saved" id="saved"></div>
+  <div class="links"><a id="dash" href="#" target="_blank">Open dashboard ↗</a></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -37,11 +37,40 @@ merged into the mined process within seconds. Try clicking **Approve** without
 ticking the verification checkbox first: the resulting rage clicks show up on
 the Friction tab.
 
+## Mining apps you DON'T control — the browser extension
+
+The snippet requires editing the target page. For third-party software (your
+bookkeeping SaaS, your CRM, any web tool), use the **FlowLens Recorder
+extension** instead — it injects the same tracker into any site you enable it
+on, with zero changes to the target app:
+
+1. Start the FlowLens server (`npm start`).
+2. Open `chrome://extensions`, enable *Developer mode*, click *Load unpacked*,
+   and select the `extension/` folder.
+3. Visit the app you want to mine, click the FlowLens icon, and turn on
+   **Record this site** (recording is opt-in per site, default off). Optionally
+   set an app name and a case-id regex on the URL (e.g. `invoices/(\d+)`).
+4. Reload the page and work normally. The dashboard grows an app selector as
+   soon as a second app shows up.
+
+Events are relayed through the extension's service worker, so the target
+page's Content-Security-Policy cannot block delivery. Labels are derived
+generically (aria-labels, `<label>` text, button text) — no annotations
+needed. Try it on the built-in, deliberately *uninstrumented* mock
+bookkeeping app at http://localhost:4000/demo/books/ with case regex
+`(JE-\d+)`.
+
+Caveats: DOM-based apps work well; canvas-rendered UIs (Google-Sheets-style
+editors) expose no semantics to read. Desktop (non-browser) apps are out of
+scope.
+
 ## What's in the box
 
 ```
 tracker/flowlens.js    Drop-in capture SDK (no build step, ~300 lines)
+extension/             Chrome extension (MV3): records any site you enable, no install on the target app
 demo-app/              Mock invoice-approval app with the tracker installed
+demo-app/books/        Mock "third-party" bookkeeping app WITHOUT tracker — extension demo target
 server/                Express + SQLite: ingest, abstraction, mining, friction, API
 dashboard/             React + React Flow: process map, variants, friction, sessions
 seed/                  Deterministic generator for 62 realistic sessions
@@ -110,7 +139,8 @@ turns them into meaningful activities:
 | Endpoint | Description |
 |---|---|
 | `POST /api/events` | Ingest a batch: `{ session, events }` |
-| `GET /api/stats` | Headline counts |
+| `GET /api/apps` | Captured apps with session counts |
+| `GET /api/stats` | Headline counts (all GET endpoints accept `?app=` to scope to one app) |
 | `GET /api/process-map?minFreq=n` | DFG nodes + edges |
 | `GET /api/variants` | Ranked variants |
 | `GET /api/friction` | Detected friction issues |
@@ -122,6 +152,7 @@ turns them into meaningful activities:
 npm run seed                 # reset + reseed the database (server/data/, gitignored)
 npm run dev                  # rebuild dashboard + start server
 npm run dev -w dashboard     # Vite dev server with HMR (proxies /api to :4000)
+npm run build:ext            # refresh extension/vendor/flowlens.js after tracker changes
 ```
 
 ## Instrumenting your own app

@@ -1,12 +1,12 @@
 import { Fragment, useEffect, useState } from 'react';
 import { fetchVariants, fmtDuration, Variant } from './api';
 
-export default function Variants({ onShowOnMap }: { onShowOnMap: (v: Variant) => void }) {
+export default function Variants({ app, onShowOnMap }: { app: string; onShowOnMap: (v: Variant) => void }) {
   const [variants, setVariants] = useState<Variant[] | null>(null);
 
   useEffect(() => {
-    fetchVariants().then(setVariants).catch(console.error);
-  }, []);
+    fetchVariants(app).then(setVariants).catch(console.error);
+  }, [app]);
 
   const maxShare = variants?.[0]?.share ?? 1;
 

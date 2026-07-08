@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "FlowLens Recorder",
+  "version": "0.1.0",
+  "description": "Behavioral process mining for any web app: records semantic interactions (never pixels, never field values) on sites you enable, and ships them to your local FlowLens server.",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": ["http://localhost:4000/*", "http://127.0.0.1:4000/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["vendor/flowlens.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "FlowLens Recorder"
+  }
+}

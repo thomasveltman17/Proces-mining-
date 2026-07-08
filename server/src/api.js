@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { allEvents, allSessions, eventsForSession, ingestBatch } from './db.js';
+import { allEvents, allSessions, eventsForSession, ingestBatch, listApps } from './db.js';
 import { activityName, buildCases } from './abstraction.js';
 import { discoverProcessMap, discoverVariants } from './mining.js';
 import { analyzeFriction } from './friction.js';
@@ -16,12 +16,17 @@ api.post('/events', (req, res) => {
   res.json({ ok: true, ingested: valid.length });
 });
 
-api.get('/stats', (_req, res) => {
-  const events = allEvents();
+api.get('/apps', (_req, res) => {
+  res.json(listApps());
+});
+
+api.get('/stats', (req, res) => {
+  const app = req.query.app || undefined;
+  const events = allEvents(app);
   const cases = buildCases(events);
   const variants = discoverVariants(cases);
   res.json({
-    sessions: allSessions().length,
+    sessions: allSessions(app).length,
     cases: cases.size,
     rawEvents: events.length,
     activities: [...cases.values()].reduce((n, c) => n + c.activities.length, 0),
@@ -31,7 +36,7 @@ api.get('/stats', (_req, res) => {
 
 api.get('/process-map', (req, res) => {
   const minFreq = Number(req.query.minFreq ?? 0);
-  const cases = buildCases(allEvents());
+  const cases = buildCases(allEvents(req.query.app || undefined));
   const { nodes, edges } = discoverProcessMap(cases);
   const keptEdges = edges.filter((e) => e.count >= minFreq);
   const connected = new Set(keptEdges.flatMap((e) => [e.from, e.to]));
@@ -42,19 +47,20 @@ api.get('/process-map', (req, res) => {
   });
 });
 
-api.get('/variants', (_req, res) => {
-  const cases = buildCases(allEvents());
+api.get('/variants', (req, res) => {
+  const cases = buildCases(allEvents(req.query.app || undefined));
   res.json(discoverVariants(cases));
 });
 
-api.get('/friction', (_req, res) => {
-  const events = allEvents();
+api.get('/friction', (req, res) => {
+  const events = allEvents(req.query.app || undefined);
   const cases = buildCases(events);
   res.json(analyzeFriction(events, cases));
 });
 
-api.get('/sessions', (_req, res) => {
-  const events = allEvents();
+api.get('/sessions', (req, res) => {
+  const app = req.query.app || undefined;
+  const events = allEvents(app);
   const byCaseOfSession = new Map();
   for (const [key, c] of buildCases(events)) {
     for (const sid of c.sessionIds) {
@@ -62,7 +68,7 @@ api.get('/sessions', (_req, res) => {
       byCaseOfSession.get(sid).push({ caseId: key, activityCount: c.activities.length });
     }
   }
-  const list = allSessions().map((s) => ({
+  const list = allSessions(app).map((s) => ({
     id: s.id,
     app: s.app,
     startedAt: s.started_at,
